@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+spec:
+  type: NodePort
+  selector:
+    app: prometheus
+  ports:
+    - protocol: TCP
+      port: 9090
+      targetPort: 9090
+      nodePort: 30011
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubenews
+spec:
+  type: NodePort
+  selector:
+    app: kubenews
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 30012
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgree
+spec:
+  selector:
+    app: postgree
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgreeexporter
+spec:
+  selector:
+    app: postgreeexporter
+  ports:
+    - protocol: TCP
+      port: 9187
+      targetPort: 9187
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+spec:
+  type: NodePort
+  selector:
+    app: alertmanager
+  ports:
+    - protocol: TCP
+      port: 9093
+      targetPort: 9093
+      nodePort: 30013

@@ -1,0 +1,201 @@
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: prometheus
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: prometheus
+#   template:
+#     metadata:
+#       labels:
+#         app: prometheus
+#     spec:
+#       containers:
+#       - name: prometheus
+#         image: prom/prometheus:v2.44.0
+#         ports:
+#         - containerPort: 9090
+#         volumeMounts:
+#         - name: config-volume
+#           mountPath: /etc/prometheus
+#         - name: rules-volume
+#           mountPath: /etc/prometheus/alert-rulers.rules
+#         resources: {}
+#         #command:
+# #- '--config.file=/etc/prometheus/prometheus.yml'
+# #- '--config.file=/etc/prometheus/alert-rulers.rules'
+#         args:
+#           - "--config.file=/etc/prometheus/prometheus.yml"
+#           - "--storage.tsdb.path=/prometheus/"
+#       volumes:
+#       - name: config-volume
+#         configMap:
+#           name: prometheus-config
+#           items:
+#             - key: prometheus.yaml
+#               path: prometheus.yml
+#       - name: rules-volume
+#         configMap:
+#           name: prometheus-config
+#           items:
+#             - key: alert-rules.yaml
+#               path: alert-rulers.rules
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubenews
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubenews
+  template:
+    metadata:
+      labels:
+        app: kubenews
+    spec:
+      containers:
+      - name: kubenews
+        image: fabricioveronez/kube-news:v1
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: postgree
+        - name: DB_USERNAME
+          value: kubenews
+        - name: DB_PASSWORD
+          value: Pg$123
+        - name: DB_DATABASE
+          value: kubenews
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgree
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgree
+  template:
+    metadata:
+      labels:
+        app: postgree
+    spec:
+      containers:
+      - name: postgree
+        image: postgres:latest
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: kubenews
+        - name: POSTGRES_PASSWORD
+          value: Pg$123
+        - name: POSTGRES_DB
+          value: kubenews
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgree-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgreeexporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgreeexporter
+  template:
+    metadata:
+      labels:
+        app: postgreeexporter
+    spec:
+      containers:
+      - name: postgreeexporter
+        image: quay.io/prometheuscommunity/postgres-exporter
+        ports:
+        - containerPort: 9187
+        env:
+        - name: DATA_SOURCE_NAME
+          value: postgresql://kubenews:Pg$123@postgree:5432/kubenews?sslmode=disable
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      containers:
+      - name: alertmanager
+        image: prom/alertmanager:v0.25.0
+        ports:
+        - containerPort: 9093
+        volumeMounts:
+        - name: alertmanager-config-volume
+          mountPath: /prometheus
+        #command:
+        #- '--config.file=/etc/alertmanager/alertmanager.yml'
+      volumes:
+      - name: alertmanager-config-volume
+        configMap:
+          name: alertmanager-config
+          items:
+          - key: alert-manager.yaml
+            path: alertmanager.yml
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.44.0
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus/"
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: prometheus-config-volume
+              mountPath: /etc/prometheus/
+            - name: prometheus-storage-volume
+              mountPath: /prometheus/
+      volumes:
+        - name: prometheus-config-volume
+          configMap:
+            defaultMode: 420
+            name: prometheus-config
+  
+        - name: prometheus-storage-volume
+          emptyDir: {}
