@@ -71,6 +71,7 @@ spec:
           value: Pg$123
         - name: DB_DATABASE
           value: kubenews
+        resources: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -101,10 +102,12 @@ spec:
         volumeMounts:
         - name: postgres-storage
           mountPath: /var/lib/postgresql/data
+        resources: {}
       volumes:
       - name: postgres-storage
         persistentVolumeClaim:
           claimName: postgree-pvc
+        
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -128,6 +131,7 @@ spec:
         env:
         - name: DATA_SOURCE_NAME
           value: postgresql://kubenews:Pg$123@postgree:5432/kubenews?sslmode=disable
+        resources: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -140,26 +144,32 @@ spec:
       app: alertmanager
   template:
     metadata:
+      name: alertmanager
       labels:
         app: alertmanager
     spec:
       containers:
       - name: alertmanager
         image: prom/alertmanager:v0.25.0
+        args:
+          - "--config.file=/etc/prometheus/alertmanager.yml"
+          - "--storage.path=/prometheus/"
         ports:
-        - containerPort: 9093
+        - name: alertmanager
+          containerPort: 9093
+        resources: {}
         volumeMounts:
-        - name: alertmanager-config-volume
-          mountPath: /prometheus
-        #command:
-        #- '--config.file=/etc/alertmanager/alertmanager.yml'
+        - name: config-volume
+          mountPath: /etc/prometheus/
+        - name: prometheus-storage-volume
+          mountPath: /prometheus/
       volumes:
-      - name: alertmanager-config-volume
+      - name: config-volume
         configMap:
           name: alertmanager-config
-          items:
-          - key: alert-manager.yaml
-            path: alertmanager.yml
+      - name: prometheus-storage-volume
+        emptyDir: {}
+
 ---
 
 apiVersion: apps/v1
@@ -191,6 +201,7 @@ spec:
               mountPath: /etc/prometheus/
             - name: prometheus-storage-volume
               mountPath: /prometheus/
+          resources: {}
       volumes:
         - name: prometheus-config-volume
           configMap:

@@ -36,7 +36,7 @@ data:
         monitor: codelab    
 
     rule_files:
-      - alert-rulers.rules
+      - prometheus.rules
 
     scrape_configs: 
       - job_name: 'Prometheus'
@@ -62,14 +62,14 @@ data:
       - scheme: http
         static_configs:
         - targets:
-          - "alertmanager:9093"
+          - "localhost:9093"
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: alertmanager-config
 data:
-  alert-manager.yaml: |-
+  alertmanager.yml: |-
     global:
     route:
       receiver: Default
@@ -111,3 +111,4 @@ data:
         chat_id: 1225103273
         parse_mode: ''
         message: "{{range .Alerts}}{{ .Annotations.description }}\n{{ end }}"
+

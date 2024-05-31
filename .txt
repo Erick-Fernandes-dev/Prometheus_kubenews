@@ -36,3 +36,36 @@ spec:
   
         - name: prometheus-storage-volume
           emptyDir: {}
+
+Pedaço alertmanager
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      containers:
+      - name: alertmanager
+        image: prom/alertmanager:v0.25.0
+        ports:
+        - containerPort: 9093
+        volumeMounts:
+        - name: alertmanager-config-volume
+          mountPath: /prometheus
+        #command:
+        #- '--config.file=/etc/alertmanager/alertmanager.yml'
+      volumes:
+      - name: alertmanager-config-volume
+        configMap:
+          name: alertmanager-config
+          items:
+          - key: alert-manager.yaml
+            path: alertmanager.yml
